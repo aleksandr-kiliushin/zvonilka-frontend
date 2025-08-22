@@ -2,7 +2,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  height: 100dvh;
   padding: 1rem;
 }
 
@@ -19,7 +19,7 @@
 
 header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 header h1 {
@@ -40,12 +40,15 @@ header h1 {
 }
 
 .connection-info {
-  margin-bottom: 2.5rem;
+  margin-bottom: 1rem;
 }
 
 .id-section,
 .remote-id-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  display: grid;
+  column-gap: 8px;
+  grid-template-columns: 2fr 1fr 1fr;
 }
 
 label {
@@ -58,12 +61,6 @@ label {
   letter-spacing: 0.5px;
 }
 
-.id-input-group {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
 .id-input,
 .remote-id-input {
   flex: 1;
@@ -74,6 +71,7 @@ label {
   font-family: "SF Mono", Monaco, "Inconsolata", "Roboto Mono", monospace;
   transition: all 0.3s ease;
   background: #f8fafc;
+  width: 100%;
 }
 
 .remote-id-input:focus {
@@ -118,12 +116,12 @@ label {
   display: flex;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
 }
 
 .call-btn {
-  padding: 1rem 2rem;
+  padding: 1rem;
   border: none;
   border-radius: 50px;
   cursor: pointer;
@@ -216,7 +214,7 @@ label {
 }
 
 .audio-level-indicator {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   padding: 1rem;
   background: #f8fafc;
   border-radius: 12px;

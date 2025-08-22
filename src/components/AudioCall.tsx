@@ -11,6 +11,10 @@ interface CallState {
   incomingCallId: string | null;
 }
 
+const generateRandomId = (): string => {
+  return Math.floor(Math.random() * 90 + 10).toString();
+};
+
 const AudioCall = () => {
   const [peer, setPeer] = useState<Peer | null>(null);
   const [myId, setMyId] = useState<string>("");
@@ -32,11 +36,6 @@ const AudioCall = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
-
-  // Генерация 2-значного ID
-  const generateRandomId = (): string => {
-    return Math.floor(Math.random() * 90 + 10).toString();
-  };
 
   // Настройка audio элемента
   useEffect(() => {
@@ -93,7 +92,6 @@ const AudioCall = () => {
 
         setStatus("🔄 Инициализация P2P соединения...");
 
-        // Генерируем 2-значный ID
         const randomId = generateRandomId();
 
         const peerInstance = new Peer(randomId, {
@@ -465,8 +463,7 @@ const AudioCall = () => {
     <div className="audio-call">
       <div className="call-container">
         <header>
-          <h1>🎧 P2P Audio Call</h1>
-          <div className="version-info">2-значные ID</div>
+          <h1>🎧 Звонилка</h1>
         </header>
 
         {isPeerLoading && (
@@ -479,28 +476,26 @@ const AudioCall = () => {
         <div className="connection-info">
           <div className="id-section">
             <label>Ваш ID (2 цифры):</label>
-            <div className="id-input-group">
-              <input
-                type="text"
-                value={myId}
-                readOnly
-                className="id-input short-id"
-                placeholder="Генерируется..."
-                style={{
-                  fontSize: "1.5rem",
-                  textAlign: "center",
-                  letterSpacing: "0.2em",
-                }}
-              />
-              <button
-                onClick={copyToClipboard}
-                className="copy-btn"
-                disabled={!myId}
-                title="Копировать ID"
-              >
-                📋
-              </button>
-            </div>
+            <input
+              type="text"
+              value={myId}
+              readOnly
+              className="id-input short-id"
+              placeholder="Генерируется..."
+              style={{
+                fontSize: "1.5rem",
+                textAlign: "center",
+                letterSpacing: "0.2em",
+              }}
+            />
+            <button
+              onClick={copyToClipboard}
+              className="copy-btn"
+              disabled={!myId}
+              title="Копировать ID"
+            >
+              📋
+            </button>
           </div>
 
           <div className="remote-id-section">
@@ -509,7 +504,7 @@ const AudioCall = () => {
               type="text"
               value={remoteId}
               onChange={(e) => setRemoteId(e.target.value)}
-              placeholder="Например: 42"
+              placeholder="42"
               className="remote-id-input short-id"
               disabled={callState.isConnected || callState.isCalling}
               style={{ fontSize: "1.2rem", textAlign: "center" }}

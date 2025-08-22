@@ -35,13 +35,13 @@ body {
   display: flex;
   place-items: center;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100dvh;
   overflow-x: hidden;
 }
 
 #root {
   width: 100%;
-  min-height: 100vh;
+  height: 100dvh;
 }
 
 /* Улучшенные стили для кнопок */
@@ -106,4 +106,8 @@ input[type="text"]:focus {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+input::placeholder {
+  color: #aaaaaa;
 }
