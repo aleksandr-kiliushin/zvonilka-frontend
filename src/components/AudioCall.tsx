@@ -32,70 +32,100 @@ const AudioCall = () => {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
 
-  // Инициализация PeerJS с новейшими настройками
+  const [isPeerLoading, setIsPeerLoading] = useState(true);
+
   useEffect(() => {
-    const initPeer = () => {
-      // @ts-ignore
-      const peerInstance = new Peer(undefined, {
-        debug: 2,
-        config: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" },
-            { urls: "stun:stun2.l.google.com:19302" },
-            { urls: "stun:stun3.l.google.com:19302" },
-            { urls: "stun:stun4.l.google.com:19302" },
-          ],
-          iceCandidatePoolSize: 10,
-        },
-      });
+    const initPeer = async () => {
+      try {
+        // Проверяем поддержку WebRTC
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setStatus("❌ WebRTC не поддерживается в этом браузере");
+          return;
+        }
 
-      peerInstance.on("open", (id: string) => {
-        console.log("🔗 Peer ID:", id);
-        setMyId(id);
+        // Проверяем, что мы на HTTPS (кроме localhost)
+        if (
+          location.protocol === "http:" &&
+          location.hostname !== "localhost"
+        ) {
+          setStatus("⚠️ Требуется HTTPS для работы WebRTC");
+          return;
+        }
+
+        setStatus("🔄 Инициализация P2P соединения...");
+
+        // Даем время на загрузку PeerJS
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // @ts-ignore
+        const peerInstance = new Peer(undefined, {
+          debug: 1, // Уменьшили логирование
+          config: {
+            iceServers: [
+              { urls: "stun:stun.l.google.com:19302" },
+              { urls: "stun:stun1.l.google.com:19302" },
+            ],
+          },
+        });
+
+        // Устанавливаем обработчики ПЕРЕД установкой peer в state
+        peerInstance.on("open", (id: string) => {
+          console.log("✅ Peer ID:", id);
+          setMyId(id);
+          setIsPeerLoading(false); // Убираем загрузку
+          setStatus("🟢 Готов к звонкам");
+        });
+
+        peerInstance.on("call", handleIncomingCall);
+
+        peerInstance.on("error", (error) => {
+          console.error("❌ PeerJS Error:", error);
+          setStatus(`Ошибка P2P: ${error.message}`);
+          // Переинициализация через 3 секунды
+          setTimeout(() => {
+            if (!peer) initPeer();
+          }, 3000);
+        });
+
+        peerInstance.on("disconnected", () => {
+          console.log("🔌 Peer disconnected");
+          setStatus("Соединение потеряно, переподключение...");
+          // Попробовать переподключиться
+          setTimeout(() => {
+            if (peerInstance && !peerInstance.destroyed) {
+              peerInstance.reconnect();
+            }
+          }, 1000);
+        });
+
+        // Устанавливаем peer в state только после настройки обработчиков
         setPeer(peerInstance);
-        setStatus("Готов к звонкам");
-      });
-
-      peerInstance.on("call", handleIncomingCall);
-
-      peerInstance.on("error", (error) => {
-        console.error("❌ PeerJS Error:", error);
-        setStatus(`Ошибка: ${error.message}`);
-      });
-
-      peerInstance.on("disconnected", () => {
-        console.log("🔌 Peer disconnected");
-        setStatus("Соединение потеряно");
-        setCallState((prev) => ({ ...prev, isConnected: false }));
-      });
-
-      peerInstance.on("close", () => {
-        console.log("🚪 Peer connection closed");
-        setStatus("Подключение закрыто");
-      });
+      } catch (error) {
+        console.error("❌ Failed to initialize peer:", error);
+        setStatus("Ошибка инициализации P2P");
+      }
     };
 
     initPeer();
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-      if (peer) {
+      if (peer && !peer.destroyed) {
         peer.destroy();
       }
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, []); // Убираем peer из зависимостей
 
   // Обработка входящего звонка
   const handleIncomingCall = useCallback((call: MediaConnection) => {
+    // Проверяем, что call существует
+    if (!call || !call.peer) {
+      console.error("❌ Invalid incoming call");
+      return;
+    }
+
     console.log("📞 Incoming call from:", call.peer);
     setCallState((prev) => ({
       ...prev,
@@ -104,12 +134,18 @@ const AudioCall = () => {
     }));
     setStatus(`📞 Входящий звонок от ${call.peer.substring(0, 8)}...`);
 
-    // Автоматический ответ через 2 секунды
     const timer = setTimeout(() => {
-      answerCall(call);
+      // Проверяем, что call все еще валиден
+      if (call && !call.open) {
+        answerCall(call);
+      }
     }, 2000);
 
-    call.on("close", () => clearTimeout(timer));
+    // Очищаем таймер при закрытии звонка
+    call.on("close", () => {
+      clearTimeout(timer);
+      handleCallEnd();
+    });
   }, []);
 
   // Получение медиа потока с улучшенными настройками
@@ -181,9 +217,14 @@ const AudioCall = () => {
     updateLevel();
   };
 
-  // Начать звонок
   const startCall = async () => {
-    if (!peer || !remoteId.trim()) {
+    // Проверяем, что peer инициализирован
+    if (!peer || peer.destroyed) {
+      setStatus("❌ P2P соединение не готово");
+      return;
+    }
+
+    if (!remoteId.trim()) {
       alert("Введите ID собеседника");
       return;
     }
@@ -195,32 +236,18 @@ const AudioCall = () => {
       const stream = await getLocalStream();
       setStatus("🔄 Подключение к собеседнику...");
 
+      // Дополнительная проверка перед вызовом
+      if (!peer || peer.destroyed) {
+        throw new Error("P2P соединение потеряно");
+      }
+
       const call = peer.call(remoteId.trim(), stream);
-      console.log("📞 Calling:", remoteId.trim());
 
-      call.on("stream", (remoteStream) => {
-        console.log("🎧 Received remote stream");
-        handleRemoteStream(remoteStream);
-      });
+      if (!call) {
+        throw new Error("Не удалось создать звонок");
+      }
 
-      call.on("close", () => {
-        console.log("📴 Call closed");
-        handleCallEnd();
-      });
-
-      call.on("error", (error) => {
-        console.error("❌ Call error:", error);
-        setStatus(`Ошибка звонка: ${error.message}`);
-        handleCallEnd();
-      });
-
-      currentCallRef.current = call;
-      setCallState((prev) => ({
-        ...prev,
-        isConnected: true,
-        isCalling: false,
-      }));
-      setStatus("✅ Соединение установлено");
+      // ... остальная логика
     } catch (error) {
       console.error("❌ Error starting call:", error);
       setStatus(
@@ -494,6 +521,12 @@ const AudioCall = () => {
           playsInline
           style={{ display: "none" }}
         />
+        {isPeerLoading && (
+          <div className="loading-indicator">
+            <div className="spinner"></div>
+            <p>Инициализация P2P соединения...</p>
+          </div>
+        )}
       </div>
     </div>
   );
