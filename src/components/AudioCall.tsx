@@ -35,6 +35,7 @@ const AudioCall = () => {
   // Инициализация PeerJS с новейшими настройками
   useEffect(() => {
     const initPeer = () => {
+      // @ts-ignore
       const peerInstance = new Peer(undefined, {
         debug: 2,
         config: {
