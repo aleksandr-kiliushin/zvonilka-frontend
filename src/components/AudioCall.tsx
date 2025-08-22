@@ -92,7 +92,7 @@ const AudioCall = () => {
 
         setStatus("🔄 Инициализация P2P соединения...");
 
-        const peerInstance = new Peer(crypto.randomUUID(), {
+        const peerInstance = new Peer(generateRandomId(), {
           debug: 1,
           config: {
             iceServers: [
