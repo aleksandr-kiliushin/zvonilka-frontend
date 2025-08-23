@@ -1,7 +1,5 @@
 <template>
-  <div id="app">
-    <AudioCall />
-  </div>
+  <AudioCall />
 </template>
 
 <script setup lang="ts">
